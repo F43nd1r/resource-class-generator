@@ -82,8 +82,8 @@
     </build>
     <distributionManagement>
         <repository>
-            <id>bintray</id>
-            <url>https://api.bintray.com/maven/f43ndr/maven/resource-class-generator/;publish=1</url>
+            <id>bintray-f43nd1r-maven</id>
+            <url>https://api.bintray.com/maven/f43nd1r/maven/resource-class-generator/;publish=1</url>
         </repository>
     </distributionManagement>
 </project>

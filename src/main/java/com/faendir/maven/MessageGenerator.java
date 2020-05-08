@@ -26,6 +26,7 @@ import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
+import org.apache.maven.project.MavenProject;
 
 import javax.lang.model.element.Modifier;
 import java.io.File;
@@ -45,7 +46,7 @@ import java.util.stream.Collectors;
 public class MessageGenerator extends AbstractMojo {
     @Parameter(property = "inputDirectory", defaultValue = "src/main/resources")
     private File inputDirectory;
-    @Parameter(property = "outputDirectory", defaultValue = "target/generated-sources/java")
+    @Parameter(property = "outputDirectory", defaultValue = "${project.build.directory}/generated-sources/java")
     private File outputDirectory;
     @Parameter(property = "packageName", defaultValue = "com.faendir.i18n")
     private String packageName;
@@ -53,11 +54,14 @@ public class MessageGenerator extends AbstractMojo {
     private String className;
     @Parameter(property = "language", defaultValue = "java")
     private String language;
+    @Parameter(property = "project", required = true, readonly = true)
+    private MavenProject project;
 
     public void execute() throws MojoExecutionException {
         if (!outputDirectory.exists()) {
             outputDirectory.mkdirs();
         }
+        project.addCompileSourceRoot(outputDirectory.getPath());
         Set<String> keys = new HashSet<>();
         try {
             Files.walk(inputDirectory.toPath())
@@ -80,7 +84,7 @@ public class MessageGenerator extends AbstractMojo {
                     break;
             }
         } catch (IOException e) {
-            e.printStackTrace();
+            throw new MojoExecutionException("Failed to generate messages", e);
         }
     }
 

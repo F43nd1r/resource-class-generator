@@ -20,9 +20,7 @@ import com.google.common.base.CaseFormat;
 import com.squareup.javapoet.FieldSpec;
 import com.squareup.javapoet.JavaFile;
 import com.squareup.javapoet.TypeSpec;
-import com.squareup.kotlinpoet.FileSpec;
-import com.squareup.kotlinpoet.KModifier;
-import com.squareup.kotlinpoet.PropertySpec;
+import com.squareup.kotlinpoet.*;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugins.annotations.LifecyclePhase;
@@ -89,7 +87,7 @@ public class MessageGenerator extends AbstractMojo {
     private void writeKotlin(Set<String> keys) throws IOException {
         com.squareup.kotlinpoet.TypeSpec.Builder builder = com.squareup.kotlinpoet.TypeSpec.objectBuilder(className);
         for(String key: keys) {
-            builder.addProperty(PropertySpec.builder(CaseFormat.LOWER_CAMEL.to(CaseFormat.UPPER_UNDERSCORE, key), String.class, KModifier.CONST).initializer("%S", key).build());
+            builder.addProperty(PropertySpec.builder(CaseFormat.LOWER_CAMEL.to(CaseFormat.UPPER_UNDERSCORE, key), TypeNames.STRING, KModifier.CONST).initializer("%S", key).build());
         }
         FileSpec.builder(packageName, className)
                 .addType(builder.build())

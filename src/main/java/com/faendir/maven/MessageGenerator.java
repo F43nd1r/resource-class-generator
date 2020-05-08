@@ -20,6 +20,9 @@ import com.google.common.base.CaseFormat;
 import com.squareup.javapoet.FieldSpec;
 import com.squareup.javapoet.JavaFile;
 import com.squareup.javapoet.TypeSpec;
+import com.squareup.kotlinpoet.FileSpec;
+import com.squareup.kotlinpoet.KModifier;
+import com.squareup.kotlinpoet.PropertySpec;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugins.annotations.LifecyclePhase;
@@ -50,6 +53,8 @@ public class MessageGenerator extends AbstractMojo {
     private String packageName;
     @Parameter(property = "className", defaultValue = "Messages")
     private String className;
+    @Parameter(property = "language", defaultValue = "java")
+    private String language;
 
     public void execute() throws MojoExecutionException {
         if (!outputDirectory.exists()) {
@@ -58,9 +63,8 @@ public class MessageGenerator extends AbstractMojo {
         Set<String> keys = new HashSet<>();
         try {
             Files.walk(inputDirectory.toPath())
-                    .peek(file -> System.out.println("Walking " + file))
                     .filter(file -> file.toString().endsWith(".properties"))
-                    .peek(file -> System.out.println("Found " + file))
+                    .peek(file -> getLog().info("Generating messages for " + file))
                     .forEach(file -> {
                         try {
                             Properties properties = new Properties();
@@ -69,19 +73,41 @@ public class MessageGenerator extends AbstractMojo {
                         } catch (Exception ignored) {
                         }
                     });
-            TypeSpec.Builder classBuilder = TypeSpec.classBuilder(className).addModifiers(Modifier.PUBLIC, Modifier.FINAL);
-            for (String key : keys) {
-                classBuilder.addField(FieldSpec.builder(String.class, CaseFormat.LOWER_CAMEL.to(CaseFormat.UPPER_UNDERSCORE, key), Modifier.PUBLIC, Modifier.STATIC, Modifier.FINAL)
-                        .initializer("$S", key)
-                        .build());
+            switch (language) {
+                case "java":
+                    writeJava(keys);
+                    break;
+                case "kotlin":
+                    writeKotlin(keys);
+                    break;
             }
-            JavaFile.builder(packageName, classBuilder.build())
-                    .skipJavaLangImports(true)
-                    .indent("    ")
-                    .build()
-                    .writeTo(outputDirectory);
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    private void writeKotlin(Set<String> keys) throws IOException {
+        com.squareup.kotlinpoet.TypeSpec.Builder builder = com.squareup.kotlinpoet.TypeSpec.objectBuilder(className);
+        for(String key: keys) {
+            builder.addProperty(PropertySpec.builder(CaseFormat.LOWER_CAMEL.to(CaseFormat.UPPER_UNDERSCORE, key), String.class, KModifier.CONST).initializer("%S", key).build());
+        }
+        FileSpec.builder(packageName, className)
+                .addType(builder.build())
+                .build()
+                .writeTo(outputDirectory);
+    }
+
+    private void writeJava(Set<String> keys) throws IOException {
+        TypeSpec.Builder classBuilder = TypeSpec.classBuilder(className).addModifiers(Modifier.PUBLIC, Modifier.FINAL);
+        for (String key : keys) {
+            classBuilder.addField(FieldSpec.builder(String.class, CaseFormat.LOWER_CAMEL.to(CaseFormat.UPPER_UNDERSCORE, key), Modifier.PUBLIC, Modifier.STATIC, Modifier.FINAL)
+                    .initializer("$S", key)
+                    .build());
+        }
+        JavaFile.builder(packageName, classBuilder.build())
+                .skipJavaLangImports(true)
+                .indent("    ")
+                .build()
+                .writeTo(outputDirectory);
     }
 }
